@@ -11,6 +11,10 @@
   <img src="https://img.shields.io/badge/version-0.1.0-orange?style=flat-square" alt="Version">
 </p>
 
+<p align="center">
+  <img src="assets/cli_output.png" alt="CLI Output" width="700">
+</p>
+
 ---
 
 ## Features
