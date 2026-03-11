@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import random
 import time
 from urllib.parse import quote
 
@@ -38,27 +37,15 @@ SECTION_TEMPLATES: dict[str, str] = {
 
 SECTION_NAMES = [s for s in SECTION_TEMPLATES if s != "profile"]
 
-# Realistic Chrome UA pool — rotated per session to reduce fingerprinting.
-_USER_AGENTS = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+# Static device fingerprint — matches the most common LinkedIn traffic pattern:
+# Windows 10 + Chrome + 1080p @ 1.25x scaling.  Stays consistent across all
+# requests for the entire cookie lifetime, just like a real browser.
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/136.0.0.0 Safari/537.36"
 )
-
-# Common display resolutions a real browser would report.
-_DISPLAY_PROFILES = (
-    {"displayDensity": 1.0, "displayWidth": 1920, "displayHeight": 1080},
-    {"displayDensity": 1.25, "displayWidth": 1920, "displayHeight": 1080},
-    {"displayDensity": 1.5, "displayWidth": 1920, "displayHeight": 1080},
-    {"displayDensity": 1.0, "displayWidth": 2560, "displayHeight": 1440},
-    {"displayDensity": 1.25, "displayWidth": 2560, "displayHeight": 1440},
-    {"displayDensity": 2.0, "displayWidth": 1440, "displayHeight": 900},
-    {"displayDensity": 1.0, "displayWidth": 1366, "displayHeight": 768},
-)
+_DISPLAY = {"displayDensity": 1.25, "displayWidth": 1920, "displayHeight": 1080}
 
 
 def _local_timezone() -> tuple[str, int]:
@@ -91,9 +78,11 @@ def _local_timezone() -> tuple[str, int]:
 
 
 def build_headers(csrf_token: str) -> dict[str, str]:
-    """Build request headers that mimic a real browser session."""
-    ua = random.choice(_USER_AGENTS)
-    display = random.choice(_DISPLAY_PROFILES)
+    """Build request headers that mimic a real browser session.
+
+    Uses a static device fingerprint (UA + display) that stays consistent
+    across all requests for the entire cookie lifetime.
+    """
     tz_name, tz_offset = _local_timezone()
 
     li_track = {
@@ -104,7 +93,7 @@ def build_headers(csrf_token: str) -> dict[str, str]:
         "timezone": tz_name,
         "deviceFormFactor": "DESKTOP",
         "mpName": "voyager-web",
-        **display,
+        **_DISPLAY,
     }
 
     return {
@@ -114,7 +103,7 @@ def build_headers(csrf_token: str) -> dict[str, str]:
         "x-li-lang": "en_US",
         "x-restli-protocol-version": "2.0.0",
         "x-li-track": json.dumps(li_track),
-        "user-agent": ua,
+        "user-agent": _USER_AGENT,
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-origin",
